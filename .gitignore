@@ -1,0 +1,39 @@
+.DS_Store
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+.env
+.env.*
+
+# Local data and artifacts
+PublicationData/
+Evaluate_Results/
+results/
+dataset/
+*.xlsx
+*.xls
+*.csv
+*.json
+*.jsonl
+*.pdf
+*.log
+*.rtf
+
+# Keep source control-friendly examples if later added explicitly
+!tests/
+!matcher/
+!patient_parser/
+!post_processing/
+!scripts/
+!trialgpt_comparator/
+
+# TrialGPT reproduction caches
+trialgpt_comparator/results/
+trialgpt_comparator/dataset/
+
