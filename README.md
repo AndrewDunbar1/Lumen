@@ -63,6 +63,7 @@ python scripts/run_cardio_publication_full_v2.py \
   --patients-dir /path/to/patient_bundles \
   --snapshot-json /path/to/cardio_snapshot.csv \
   --output-dir /path/to/output_dir \
+  --patient-workers 4 \
   --llm-rerank-top-n 20 \
   --llm-model gpt-5-mini
 ```

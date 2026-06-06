@@ -234,6 +234,7 @@ def main() -> None:
     parser.add_argument("--limit-patients", type=int, default=0)
     parser.add_argument("--enrich-workers", type=int, default=8)
     parser.add_argument("--enrich-retries", type=int, default=4)
+    parser.add_argument("--patient-workers", type=int, default=4)
     parser.add_argument("--baseline-pack-dir", default="")
     args = parser.parse_args()
 
@@ -274,18 +275,35 @@ def main() -> None:
     pairs_tsv = output_dir / "summary" / "publication_patient_trial_pairs_topN.tsv"
     all_master_rows: list[dict] = []
 
-    for index, patient_id in enumerate(patient_ids, start=1):
+    def process_patient(index: int, patient_id: str) -> dict:
         patient_label = f"Patient_{patient_id}"
         patient_summary_json = output_dir / "summary" / f"{patient_label}_summary.json"
         if patient_summary_json.exists():
-            print(f"[patient {index}/{len(patient_ids)}] {patient_label}: already complete, skipping", flush=True)
-            continue
+            return {
+                "index": index,
+                "patient_id": patient_id,
+                "patient_label": patient_label,
+                "status": "skipped_existing",
+                "message": "already complete, skipping",
+                "pair_rows": [],
+                "evaluations": [],
+                "seconds": 0.0,
+            }
 
         patient_path = patients_dir / f"{patient_label}.json"
         if not patient_path.exists():
-            print(f"[patient {index}/{len(patient_ids)}] {patient_label}: missing patient JSON, skipping", flush=True)
-            continue
+            return {
+                "index": index,
+                "patient_id": patient_id,
+                "patient_label": patient_label,
+                "status": "missing_patient_json",
+                "message": "missing patient JSON, skipping",
+                "pair_rows": [],
+                "evaluations": [],
+                "seconds": 0.0,
+            }
 
+        patient_t0 = time.perf_counter()
         patient = load_patient(patient_path)
         summary, evaluations, audit_rows = evaluate_patient_against_trials(
             patient=patient,
@@ -353,8 +371,59 @@ def main() -> None:
             },
         }
         write_json(patient_summary_json, patient_summary)
-        all_master_rows.extend(evaluations)
-        print(f"[patient {index}/{len(patient_ids)}] {patient_label}: complete", flush=True)
+        return {
+            "index": index,
+            "patient_id": patient_id,
+            "patient_label": patient_label,
+            "status": "complete",
+            "message": f"complete in {time.perf_counter() - patient_t0:.1f}s",
+            "pair_rows": pair_rows,
+            "evaluations": evaluations,
+            "seconds": round(time.perf_counter() - patient_t0, 3),
+        }
+
+    patient_t0 = time.perf_counter()
+    patient_results: list[dict] = []
+    max_patient_workers = max(1, args.patient_workers)
+    print(f"[run] patient_workers={max_patient_workers}", flush=True)
+    with ThreadPoolExecutor(max_workers=max_patient_workers) as executor:
+        futures = {
+            executor.submit(process_patient, index, patient_id): (index, patient_id)
+            for index, patient_id in enumerate(patient_ids, start=1)
+        }
+        for future in as_completed(futures):
+            index, patient_id = futures[future]
+            patient_label = f"Patient_{patient_id}"
+            try:
+                result = future.result()
+            except Exception as exc:
+                result = {
+                    "index": index,
+                    "patient_id": patient_id,
+                    "patient_label": patient_label,
+                    "status": "error",
+                    "message": repr(exc),
+                    "pair_rows": [],
+                    "evaluations": [],
+                    "seconds": 0.0,
+                }
+            patient_results.append(result)
+            print(
+                f"[patient {index}/{len(patient_ids)}] {patient_label}: {result['message']}",
+                flush=True,
+            )
+
+    patient_results.sort(key=lambda row: row["index"])
+    for result in patient_results:
+        if result["pair_rows"]:
+            write_pairs_tsv(pairs_tsv, result["pair_rows"])
+        all_master_rows.extend(result["evaluations"])
+
+    completed_patients = sum(1 for row in patient_results if row["status"] == "complete")
+    skipped_patients = sum(1 for row in patient_results if row["status"] == "skipped_existing")
+    missing_patients = sum(1 for row in patient_results if row["status"] == "missing_patient_json")
+    error_patients = sum(1 for row in patient_results if row["status"] == "error")
+    patient_parallel_seconds = round(time.perf_counter() - patient_t0, 3)
 
     meta_path = output_dir / "summary" / "run_meta.json"
     write_json(
@@ -376,12 +445,25 @@ def main() -> None:
                 "shortlist_size": args.shortlist_size,
                 "llm_rerank_top_n": args.llm_rerank_top_n,
                 "llm_model": args.llm_model,
+                "patient_workers": max_patient_workers,
             },
             "counts": {
                 "patients_requested": len(read_patient_ids(patient_ids_path)),
                 "patients_processed_target": len(patient_ids),
+                "patients_completed": completed_patients,
+                "patients_skipped_existing": skipped_patients,
+                "patients_missing_json": missing_patients,
+                "patients_errors": error_patients,
                 "snapshot_nct_ids": len(nct_ids),
                 "enriched_trials_available": len(trials),
+            },
+            "timing": {
+                "patient_parallel_seconds": patient_parallel_seconds,
+                "patient_seconds": {
+                    row["patient_id"]: row["seconds"]
+                    for row in patient_results
+                    if row["status"] == "complete"
+                },
             },
         },
     )
