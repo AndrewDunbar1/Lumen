@@ -1,61 +1,69 @@
-# Lumen
+# Lumen AI
 
-Lumen is an open-source clinical trial shortlist-enrichment pipeline for matching structured patient records to candidate cardiology trials.
+Lumen AI is an open-source pipeline that narrows a large clinical trial corpus to a short, evidence-linked list of trials for each patient, for review by a clinician or study team. It produces a screening shortlist; it does not determine eligibility.
 
-This public repo contains two code paths:
+This repository contains the code for:
 
-- `matcher/` and `scripts/`: the in-house Lumen pipeline used for structured patient profiling, candidate generation, reranking, criterion-level evaluation, and final top-5 review
-- `trialgpt_comparator/`: the TrialGPT-style comparator reproduction used in the paired manuscript comparison
+> Dunbar A, Elfayoumy H, Broder L, Barakat N, Kunaparaju A, Jog S, Patel S, Lam T, Ganatra S, Dani SS. Lumen AI: Compressing Large Clinical Trial Search Spaces into Clinician-Reviewable Shortlists. *JAMIA Open*. 2026.
 
-The repository is code-first and intentionally excludes protected patient data, local trial snapshots, review workbooks, and large run artifacts.
+## How it works
 
-## Repository Layout
+For each patient, Lumen:
 
-- `matcher/`: core patient-trial matching package
-- `patient_parser/`: FHIR patient bundle parsing utilities
-- `post_processing/`: review/export helpers used by the pipeline
-- `scripts/run_cardio_publication_full_v2.py`: main in-house production runner
-- `scripts/benchmark_cardio_matcher.py`: benchmark and comparator evaluation
-- `scripts/review_top5_matches_with_llm.py`: second-pass top-5 review layer
-- `scripts/build_high_likelihood_dossier.py`: print-ready dossier builder for reviewed matches
-- `scripts/analyze_trialgpt_manual_results.py`: manual validation analysis utility
-- `tests/test_matcher_pipeline.py`: focused matcher tests
-- `trialgpt_comparator/`: TrialGPT-style retrieval, matching, aggregation, and ranking scripts
+1. Parses a FHIR patient bundle into a structured profile (`patient_parser/`, `matcher/patient_profiles.py`).
+2. Normalizes trial records and splits eligibility criteria (`matcher/trial_normalization.py`).
+3. Retrieves 100 candidate trials from the corpus (`matcher/retrieval.py`).
+4. Reranks to 20 candidates with deterministic clinical features, then with an LLM (`matcher/llm_reranker.py`).
+5. Evaluates criteria individually and combines the results into a match decision (`matcher/criterion_eval.py`, `matcher/decisioning.py`).
+6. Exports a five-trial shortlist per patient.
+7. Runs a second-pass LLM review that labels each shortlisted pair as `high_likelihood`, `possible`, `unlikely` or `no_match` (`scripts/review_top5_matches_with_llm.py`).
 
-## What Lumen Does
+In the published evaluation the LLM stages used `gpt-5-mini`.
 
-The in-house pipeline follows this sequence:
+## Repository layout
 
-1. Parse FHIR-style patient bundles into structured profiles.
-2. Normalize trial records and eligibility criteria.
-3. Generate a high-recall candidate set.
-4. Rerank candidates using deterministic clinical signals and optional `gpt-5-mini` reranking.
-5. Evaluate criterion-level eligibility and calibrated fit.
-6. Export a final top-5 shortlist.
-7. Optionally run a second-pass LLM review over the top-5 pairs.
+| Path | Contents |
+| --- | --- |
+| `matcher/` | Core matching package: profiles, trial normalization, retrieval, reranking, criterion evaluation, decisioning |
+| `patient_parser/` | FHIR bundle parsing |
+| `post_processing/` | Export helpers used by the runner |
+| `llm/` | Condition-normalization helper |
+| `scripts/run_cardio_publication_full_v2.py` | Main pipeline runner |
+| `scripts/review_top5_matches_with_llm.py` | Second-pass review of the top-five shortlist |
+| `scripts/build_high_likelihood_dossier.py` | Reviewer dossier builder |
+| `scripts/benchmark_cardio_matcher.py`, `scripts/analyze_trialgpt_manual_results.py` | Evaluation utilities |
+| `analysis/run_ablation.py` | Component-removal (ablation) runs with API telemetry |
+| `analysis/analyze_final_adjudication.py` | Final statistics: Wilson intervals, top-k yield, paired bootstrap and exact McNemar tests |
+| `trialgpt_comparator/` | TrialGPT-style comparator used in the paper |
+| `tests/` | Unit tests for the matcher |
 
-The TrialGPT-style comparator follows a different sequence:
+## Installation
 
-1. Convert patient bundles into compact free-text summaries.
-2. Build a BEIR-style trial corpus.
-3. Retrieve top candidates with BM25.
-4. Run TrialGPT-style inclusion/exclusion matching per pair.
-5. Run TrialGPT-style aggregation scoring per pair.
-6. Rank by composite score and export the top 5.
-
-## Quick Start
-
-### In-house Lumen pipeline
-
-Install the core dependencies:
+Python 3.11 or later.
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Set `OPENAI_API_KEY` if you want LLM reranking or top-5 review.
+The LLM stages read the OpenAI API key from the `OPENAI_API_KEY` environment variable or a local `.env` file.
 
-Example run:
+The comparator has its own dependencies:
+
+```bash
+pip install -r trialgpt_comparator/requirements.txt
+```
+
+## Data
+
+No patient data or trial text is distributed with this repository.
+
+- **Patients.** The evaluation used 200 cardiology patients from MIMIC-IV, represented as FHIR bundles. MIMIC-IV is available from [PhysioNet](https://physionet.org/content/mimiciv/) to credentialed users who complete its data use agreement. It cannot be redistributed here.
+- **Trials.** The corpus was 11,231 cardiology trials from [ClinicalTrials.gov](https://clinicaltrials.gov/), snapshot of March 5, 2026, enriched through the ClinicalTrials.gov API v2.
+- **Results.** Aggregate results behind the paper's tables and figures, and the registry identifiers of the trial corpus, are deposited in Dryad (DOI to be added on publication).
+
+## Usage
+
+Run the pipeline:
 
 ```bash
 python scripts/run_cardio_publication_full_v2.py \
@@ -68,43 +76,26 @@ python scripts/run_cardio_publication_full_v2.py \
   --llm-model gpt-5-mini
 ```
 
-Example benchmark:
+Each script documents its remaining options under `--help`.
+
+The component-removal runs and the final analysis read their inputs from local folders set by `LUMEN_DATA_DIR` and `LUMEN_ANALYSIS_DIR`; see the top of each file in `analysis/` for the expected layout. The comparator workflow is described in `trialgpt_comparator/README.md`.
+
+The LLM calls do not set a seed, so repeated runs can differ slightly.
+
+## Tests
 
 ```bash
-python scripts/benchmark_cardio_matcher.py \
-  --run-dir /path/to/output_dir \
-  --baseline-pack-dir /path/to/adjudicated_top3_pack
+pytest
 ```
 
-### TrialGPT-style comparator
+## TrialGPT-style comparator
 
-The comparator has its own dependency file:
+`trialgpt_comparator/` adapts the TrialGPT matching and ranking code (Jin et al., *Nat Commun* 2024) to the same cohort and corpus. It is an adapted reproduction and not a release of the original TrialGPT project. The upstream public-domain notice is kept in `trialgpt_comparator/LICENSE`.
 
-```bash
-pip install -r trialgpt_comparator/requirements.txt
-```
+## Citation
 
-Then see:
-
-- `trialgpt_comparator/build_cardiology_dataset.py`
-- `trialgpt_comparator/run_cardiology_retrieval.py`
-- `trialgpt_comparator/run_matching_parallel.py`
-- `trialgpt_comparator/run_aggregation_parallel.py`
-- `trialgpt_comparator/top5_cardiology.py`
-
-## Public Release Notes
-
-- No patient data is included.
-- No local trial snapshots or adjudication outputs are included.
-- Environment-specific `.env` files are intentionally excluded.
-- The TrialGPT-style comparator is included as a reproduction used for side-by-side evaluation, not as an official release of the original TrialGPT project.
-
-## Testing
-
-```bash
-pytest tests/test_matcher_pipeline.py
-```
+If you use this code, please cite the paper above. Citation metadata is in `CITATION.cff`.
 
 ## License
 
-This repository is released under the MIT License. See `LICENSE`.
+MIT. See `LICENSE`.

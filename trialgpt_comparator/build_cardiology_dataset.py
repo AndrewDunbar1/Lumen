@@ -21,18 +21,11 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
-PATIENTS_DIR = Path(
-    "/Users/andrew/Desktop/cureva-main-new/PublicationData/MIMIC_FHIR_Patients/patients"
-)
-TOP200_FILE = Path(
-    "/Users/andrew/Desktop/cureva-main-new/PublicationData/MIMIC_FHIR_Patients"
-    "/cardiology_trial_top200_patient_ids.txt"
-)
-TRIALS_CSV = Path(
-    "/Users/andrew/Desktop/cureva-main-new/PublicationData/Cardio_Trials_Snapshot"
-    "/full_publication_run_2026-03-05/trials_enriched_from_snapshot.csv"
-)
-OUT_DIR = Path("/Users/andrew/Desktop/TrialGPT/dataset/cardiology")
+# Set these environment variables, or place the inputs at the default locations.
+PATIENTS_DIR = Path(os.environ.get("LUMEN_PATIENTS_DIR", "data/patients"))
+TOP200_FILE = Path(os.environ.get("LUMEN_PATIENT_IDS", "data/patient_ids.txt"))
+TRIALS_CSV = Path(os.environ.get("LUMEN_TRIALS_CSV", "data/trials_enriched_from_snapshot.csv"))
+OUT_DIR = Path(os.environ.get("LUMEN_COMPARATOR_DATASET_DIR", "dataset/cardiology"))
 
 # ---------------------------------------------------------------------------
 # Utility helpers

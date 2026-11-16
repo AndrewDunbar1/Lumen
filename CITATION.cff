@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the article below."
+title: "Lumen AI"
+type: software
+license: MIT
+repository-code: "https://github.com/AndrewDunbar1/Lumen"
+authors:
+  - family-names: Dunbar
+    given-names: Andrew
+preferred-citation:
+  type: article
+  title: "Lumen AI: Compressing Large Clinical Trial Search Spaces into Clinician-Reviewable Shortlists"
+  journal: "JAMIA Open"
+  year: 2026
+  authors:
+    - family-names: Dunbar
+      given-names: Andrew
+    - family-names: Elfayoumy
+      given-names: Hussein
+    - family-names: Broder
+      given-names: Luca
+    - family-names: Barakat
+      given-names: Nadim
+    - family-names: Kunaparaju
+      given-names: Arya
+    - family-names: Jog
+      given-names: Sahil
+    - family-names: Patel
+      given-names: Sachin
+    - family-names: Lam
+      given-names: Tara
+    - family-names: Ganatra
+      given-names: Sarju
+    - family-names: Dani
+      given-names: Sourbha S.

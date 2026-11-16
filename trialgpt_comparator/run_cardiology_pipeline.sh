@@ -23,8 +23,8 @@ set -e
 cd "$(dirname "$0")"
 
 # Load .env if present
-if [ -f "../cureva-main/.env" ]; then
-  export $(grep -v '^#' ../cureva-main/.env | xargs)
+if [ -f "../.env" ]; then
+  export $(grep -v '^#' ../.env | xargs)
 elif [ -f ".env" ]; then
   export $(grep -v '^#' .env | xargs)
 fi
