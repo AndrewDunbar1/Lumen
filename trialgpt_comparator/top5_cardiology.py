@@ -7,8 +7,8 @@ report to results/top5_cardiology.json
 
 Usage:
   python top5_cardiology.py \
-    results/matching_results_cardiology_gpt-4-turbo.json \
-    results/aggregation_results_cardiology_gpt-4-turbo.json \
+    results/matching_results_cardiology_gpt-5-mini.json \
+    results/aggregation_results_cardiology_gpt-5-mini.json \
     [--n 5] [--output results/top5_cardiology.json]
 """
 
@@ -195,7 +195,7 @@ if __name__ == "__main__":
         patient_text = queries.get(patient_id, "")
         report[patient_id] = {
             "patient_id": patient_id,
-            "patient_summary": patient_text[:400] + "…" if len(patient_text) > 400 else patient_text,
+            "patient_summary": patient_text[:400] + "\u2026" if len(patient_text) > 400 else patient_text,
             "total_trials_scored": len(trial2score),
             f"top_{args.n}_matches": top_details,
         }
@@ -209,14 +209,14 @@ if __name__ == "__main__":
     out_path.write_text(json.dumps(report, indent=2))
 
     print(f"\n{'='*60}")
-    print(f"Top-{args.n} matches saved → {out_path}")
+    print(f"Top-{args.n} matches saved -> {out_path}")
     print(f"Patients with results : {patients_with_matches}")
     print()
 
     # Print a human-readable summary to stdout
     for patient_id, entry in report.items():
         print(f"Patient: {patient_id}")
-        print(f"  Summary: {entry['patient_summary'][:120]}…")
+        print(f"  Summary: {entry['patient_summary'][:120]}...")
         print(f"  Trials scored: {entry['total_trials_scored']}")
         for match in entry[f"top_{args.n}_matches"]:
             print(f"  [{match['rank']}] {match['nct_id']}  score={match['composite_score']:.3f}")

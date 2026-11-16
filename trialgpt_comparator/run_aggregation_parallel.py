@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Parallel TrialGPT aggregation — resumes from cache, skips malformed results.
+Parallel TrialGPT aggregation - resumes from cache, skips malformed results.
 
 Usage:
   python run_aggregation_parallel.py <matching_results_path> <model> [--workers 20]
@@ -19,7 +19,7 @@ from TrialGPT import trialgpt_aggregation  # noqa: E402
 
 CORPUS = "cardiology"
 
-# ── CLI ───────────────────────────────────────────────────────────────────────
+# --- CLI ---
 parser = argparse.ArgumentParser()
 parser.add_argument("matching_results_path")
 parser.add_argument("model")
@@ -29,11 +29,11 @@ args = parser.parse_args()
 model = args.model
 output_path = f"results/aggregation_results_{CORPUS}_{model}.json"
 
-# ── Load inputs ───────────────────────────────────────────────────────────────
+# --- Load inputs ---
 print(f"Loading matching results: {args.matching_results_path}")
 matching_results = json.load(open(args.matching_results_path))
 
-print("Loading trial info from corpus.jsonl …")
+print("Loading trial info from corpus.jsonl...")
 trial2info: dict = {}
 with open(f"dataset/{CORPUS}/corpus.jsonl") as f:
     for line in f:
@@ -41,7 +41,7 @@ with open(f"dataset/{CORPUS}/corpus.jsonl") as f:
         trial2info[entry["_id"]] = entry["metadata"]
 print(f"  {len(trial2info):,} trials loaded")
 
-print("Loading patient queries …")
+print("Loading patient queries...")
 queries: dict = {}
 with open(f"dataset/{CORPUS}/queries.jsonl") as f:
     for line in f:
@@ -49,11 +49,11 @@ with open(f"dataset/{CORPUS}/queries.jsonl") as f:
         queries[e["_id"]] = e["text"]
 print(f"  {len(queries)} patients loaded")
 
-# ── Load existing cache ───────────────────────────────────────────────────────
+# --- Load existing cache ---
 if os.path.exists(output_path):
     output: dict = json.load(open(output_path))
     cached = sum(len(v) for v in output.values())
-    print(f"Resuming — {cached} pairs already cached")
+    print(f"Resuming - {cached} pairs already cached")
 else:
     output = {}
     cached = 0
@@ -64,7 +64,7 @@ def save():
     with open(output_path, "w") as f:
         json.dump(output, f, indent=2)
 
-# ── Build work list ───────────────────────────────────────────────────────────
+# --- Build work list ---
 tasks = []
 skipped_no_trial = 0
 skipped_cached = 0
@@ -105,7 +105,7 @@ print(f"To process     : {len(tasks)}")
 print(f"Workers        : {args.workers}")
 print()
 
-# ── Worker ────────────────────────────────────────────────────────────────────
+# --- Worker ---
 def process_pair(task):
     patient_id, patient_text, trial_id, results = task
     try:
@@ -117,7 +117,7 @@ def process_pair(task):
     except Exception as exc:
         return ("err", patient_id, trial_id, str(exc))
 
-# ── Run ───────────────────────────────────────────────────────────────────────
+# --- Run ---
 completed = skipped_cached
 errors = 0
 
@@ -134,4 +134,4 @@ with ThreadPoolExecutor(max_workers=args.workers) as pool:
             print(f"  {completed}/{total} tasks  |  {pairs_done} pairs saved  |  {errors} errors",
                   flush=True)
 
-print(f"\n✓ Aggregation complete — {output_path}")
+print(f"\nAggregation complete - {output_path}")

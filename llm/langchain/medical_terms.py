@@ -3,8 +3,7 @@ import asyncio
 from typing import List
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
-# Load your key (or set directly)
-load_dotenv()  # or api_key="your-key"
+load_dotenv()
 MODEL_NAME = "gpt-5-mini"
 
 
@@ -76,22 +75,3 @@ async def generalize_conditions_async(conditions: List[str]) -> List[str]:
 def generalize_conditions(conditions: List[str]) -> List[str]:
     """Sync wrapper around the async function for ease of use."""
     return asyncio.run(generalize_conditions_async(conditions))
-
-
-# Optional test
-if __name__ == "__main__":
-    test_conditions = [
-        "Secondary malignant neoplasm of bone",
-        "Iron deficiency anemia secondary to blood loss",
-        "Body mass index 19.9 or less, adult",
-        "Malignant neoplasm of ascending colon",
-        "Abdominal pain, other specified site",
-        "Laparoscopic surgical procedure converted to open procedure",
-        "Diarrhea, unspecified",
-        "Personal history of antineoplastic chemotherapy",
-        "Alcohol abuse, unspecified"
-    ]
-
-    results = generalize_conditions(test_conditions)
-    for original, general in zip(test_conditions, results):
-        print(f"{original} → {general}")

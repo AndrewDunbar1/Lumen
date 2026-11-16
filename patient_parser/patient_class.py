@@ -14,8 +14,6 @@ class ConditionData:
     """Represents a single medical condition for a patient."""
 
     def __init__(self, condition_json: Condition):
-        # self.id = condition_json.id
-        # self.code = condition_json.code.text
         self.code = condition_json.code.coding[0].display
         self.id = condition_json.code.coding[0].code
 

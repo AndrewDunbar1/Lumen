@@ -9,8 +9,8 @@ Replacement for trialgpt_ranking/run_aggregation.py that:
 
 Usage:
   python run_cardiology_aggregation.py \
-    results/matching_results_cardiology_gpt-4-turbo.json \
-    gpt-4-turbo
+    results/matching_results_cardiology_gpt-5-mini.json \
+    gpt-5-mini
 """
 
 import json
@@ -58,11 +58,11 @@ if __name__ == "__main__":
     print(f"Loading matching results: {matching_results_path}")
     matching_results = json.load(open(matching_results_path))
 
-    print("Loading trial info from corpus.jsonl …")
+    print("Loading trial info from corpus.jsonl...")
     trial2info = load_trial2info(CORPUS)
     print(f"  {len(trial2info):,} trials loaded")
 
-    print("Loading patient queries …")
+    print("Loading patient queries...")
     queries = load_queries(CORPUS)
     print(f"  {len(queries)} patients loaded")
 
@@ -113,7 +113,7 @@ if __name__ == "__main__":
                     print(f"  [ERROR] {patient_id} / {trial_id}: {exc}")
                     continue
 
-    print(f"\n✓ Aggregation complete")
+    print(f"\nAggregation complete")
     print(f"  Processed  : {processed} patient-trial pairs")
     print(f"  Skipped    : {skipped_trials} (trial not in corpus)")
     print(f"  Output     : {output_path}")

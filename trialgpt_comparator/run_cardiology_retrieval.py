@@ -7,19 +7,19 @@ expected by trialgpt_matching/run_matching.py.
 
 Key differences from original hybrid_fusion_retrieval.py:
   - No ground-truth qrels needed (custom data has no labels)
-  - MPS (Apple Silicon) or CPU — no CUDA requirement
+  - MPS (Apple Silicon) or CPU - no CUDA requirement
   - Reads cached keywords if available; falls back to raw patient text
   - Embeds full trial info in each retrieved item (for run_matching.py)
 
 Usage (from TrialGPT root, with venv activated):
   python run_cardiology_retrieval.py [options]
 
-  --q_type   keyword source: 'raw' or model name (default: gpt-4-turbo if
-             results/retrieval_keywords_gpt-4-turbo_cardiology.json exists,
-             else 'raw')
+  --q_type   query source: 'raw' (patient summary text, the default) or a model
+             name, which uses results/retrieval_keywords_<model>_cardiology.json
+             when that file exists
   --k        RRF constant (default: 20)
-  --top_n    trials to return per patient (default: 50)
-  --bm25_only  skip MedCPT — faster, no GPU / large model download needed
+  --top_n    trials to return per patient (default: 20)
+  --bm25_only  skip MedCPT - faster, no GPU / large model download needed
 """
 
 import argparse
@@ -80,12 +80,12 @@ def load_corpus_meta(corpus: str) -> dict[str, dict]:
 def get_bm25_index(corpus: str, meta: dict[str, dict]):
     cache = Path(f"trialgpt_retrieval/bm25_corpus_{corpus}.json")
     if cache.exists():
-        print("  Loading cached BM25 index …")
+        print("  Loading cached BM25 index...")
         data = json.loads(cache.read_text())
         tokenized_corpus = data["tokenized_corpus"]
         corpus_nctids = data["corpus_nctids"]
     else:
-        print("  Building BM25 index …")
+        print("  Building BM25 index...")
         tokenized_corpus = []
         corpus_nctids = []
         with open(f"dataset/{corpus}/corpus.jsonl") as f:
@@ -101,7 +101,7 @@ def get_bm25_index(corpus: str, meta: dict[str, dict]):
             tokenized_corpus.append(tokens)
         data = {"tokenized_corpus": tokenized_corpus, "corpus_nctids": corpus_nctids}
         cache.write_text(json.dumps(data))
-        print(f"  BM25 index cached → {cache}")
+        print(f"  BM25 index cached -> {cache}")
     bm25 = BM25Okapi(tokenized_corpus)
     return bm25, corpus_nctids
 
@@ -118,11 +118,11 @@ def get_medcpt_index(corpus: str, device: str):
     nctids_path = Path(f"trialgpt_retrieval/{corpus}_nctids.json")
 
     if embed_path.exists() and nctids_path.exists():
-        print("  Loading cached MedCPT embeddings …")
+        print("  Loading cached MedCPT embeddings...")
         embeds = np.load(str(embed_path))
         corpus_nctids = json.loads(nctids_path.read_text())
     else:
-        print(f"  Encoding corpus with MedCPT on {device} (one-time, may take ~30 min on CPU) …")
+        print(f"  Encoding corpus with MedCPT on {device} (one-time, may take ~30 min on CPU)...")
         model = AutoModel.from_pretrained("ncbi/MedCPT-Article-Encoder").to(device)
         tokenizer = AutoTokenizer.from_pretrained("ncbi/MedCPT-Article-Encoder")
         embeds = []
@@ -169,7 +169,7 @@ def run_retrieval(q_type: str, k: int, top_n: int, bm25_only: bool):
     device = get_device()
     print(f"Device: {device}")
 
-    # ── Load queries ──────────────────────────────────────────────────────
+    # --- Load queries ---
     queries: dict[str, str] = {}
     with open(f"dataset/{CORPUS}/queries.jsonl") as f:
         for line in f:
@@ -177,12 +177,12 @@ def run_retrieval(q_type: str, k: int, top_n: int, bm25_only: bool):
             queries[e["_id"]] = e["text"]
     print(f"Loaded {len(queries)} patients")
 
-    # ── Load corpus metadata ──────────────────────────────────────────────
-    print("Loading corpus metadata …")
+    # --- Load corpus metadata ---
+    print("Loading corpus metadata...")
     corpus_meta = load_corpus_meta(CORPUS)
     print(f"  {len(corpus_meta):,} trials in corpus")
 
-    # ── Resolve keyword lists ─────────────────────────────────────────────
+    # --- Resolve keyword lists ---
     kw_file = Path(f"results/retrieval_keywords_{q_type}_{CORPUS}.json")
     id2conditions: dict[str, list[str]] = {}
 
@@ -196,14 +196,14 @@ def run_retrieval(q_type: str, k: int, top_n: int, bm25_only: bool):
                 id2conditions[qid] = kw_data
     else:
         if q_type != "raw":
-            print(f"  [INFO] Keyword file not found — using raw patient text")
+            print(f"  [INFO] Keyword file not found - using raw patient text")
         for qid, text in queries.items():
             id2conditions[qid] = [text]
 
-    # ── Build BM25 index ──────────────────────────────────────────────────
+    # --- Build BM25 index ---
     bm25, bm25_nctids = get_bm25_index(CORPUS, corpus_meta)
 
-    # ── Optionally build MedCPT index ─────────────────────────────────────
+    # --- Optionally build MedCPT index ---
     medcpt_index = medcpt_nctids = qenc_model = qenc_tokenizer = None
     if not bm25_only:
         try:
@@ -213,7 +213,7 @@ def run_retrieval(q_type: str, k: int, top_n: int, bm25_only: bool):
         except Exception as exc:
             print(f"  [WARN] MedCPT unavailable ({exc}). Using BM25-only.")
 
-    # ── Retrieve for each patient ─────────────────────────────────────────
+    # --- Retrieve for each patient ---
     N = top_n
     output: list[dict] = []
 
@@ -269,25 +269,25 @@ def run_retrieval(q_type: str, k: int, top_n: int, bm25_only: bool):
             }
         )
 
-    # ── Save ──────────────────────────────────────────────────────────────
+    # --- Save ---
     out_path = Path(f"dataset/{CORPUS}/retrieved_trials.json")
     out_path.write_text(json.dumps(output, indent=2))
-    print(f"\n✓ Saved {len(output)} patients → {out_path}")
+    print(f"\nSaved {len(output)} patients -> {out_path}")
     print(f"  Each patient has up to {N} candidate trials (label '1')")
 
-    # Also save a simpler qid→nctids mapping for reference
+    # Also save a simpler qid->nctids mapping for reference
     simple_path = Path(f"results/retrieved_cardiology_simple.json")
     simple = {row["patient_id"]: [t["NCTID"] for t in row["1"]] for row in output}
     simple_path.parent.mkdir(exist_ok=True)
     simple_path.write_text(json.dumps(simple, indent=2))
-    print(f"  Simple mapping → {simple_path}")
+    print(f"  Simple mapping -> {simple_path}")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--q_type", default="gpt-4-turbo")
+    parser.add_argument("--q_type", default="raw")
     parser.add_argument("--k", type=int, default=20)
-    parser.add_argument("--top_n", type=int, default=50)
+    parser.add_argument("--top_n", type=int, default=20)
     parser.add_argument("--bm25_only", action="store_true")
     args = parser.parse_args()
     run_retrieval(args.q_type, args.k, args.top_n, args.bm25_only)

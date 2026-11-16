@@ -2,12 +2,12 @@
 """
 Build TrialGPT-compatible cardiology dataset from:
   - MIMIC FHIR patient bundles (top-200 cardiology patients)
-  - Cureva enriched cardiology trials CSV (11,231 trials with eligibility criteria)
+  - Enriched cardiology trials CSV (11,231 trials with eligibility criteria)
 
 Outputs to dataset/cardiology/:
-  corpus.jsonl   — one trial per line in TrialGPT format
-  queries.jsonl  — one patient per line as free-text clinical summary
-  qrels/test.tsv — stub qrels (all patients listed, no ground-truth labels)
+  corpus.jsonl   - one trial per line in TrialGPT format
+  queries.jsonl  - one patient per line as free-text clinical summary
+  qrels/test.tsv - stub qrels (all patients listed, no ground-truth labels)
 """
 
 import csv
@@ -73,7 +73,7 @@ def calc_age_from_fhir(birth_date_str: str, encounter_dates: list[str]) -> int |
 
 
 # ---------------------------------------------------------------------------
-# Patient FHIR → free-text summary  (pure-JSON, no fhirclient needed)
+# Patient FHIR -> free-text summary  (pure-JSON, no fhirclient needed)
 # ---------------------------------------------------------------------------
 
 def parse_fhir_bundle(bundle: dict, patient_id: str) -> str:
@@ -216,7 +216,7 @@ def split_eligibility(raw: str) -> tuple[str, str]:
         parts = text_norm.split("__INCLUSION__", 1)
         inclusion = "inclusion criteria:\n\n" + parts[1].strip()
     else:
-        # No clear markers — treat whole block as inclusion
+        # No clear markers - treat whole block as inclusion
         inclusion = "inclusion criteria:\n\n" + text
 
     return inclusion, exclusion
@@ -227,7 +227,7 @@ def split_eligibility(raw: str) -> tuple[str, str]:
 # ---------------------------------------------------------------------------
 
 def build_corpus():
-    print("Building corpus.jsonl from enriched trials CSV …")
+    print("Building corpus.jsonl from enriched trials CSV...")
     out_path = OUT_DIR / "corpus.jsonl"
     skipped = 0
     written = 0
@@ -286,7 +286,7 @@ def build_corpus():
             outfile.write(json.dumps(record) + "\n")
             written += 1
 
-    print(f"  → {written} trials written, {skipped} skipped")
+    print(f"  -> {written} trials written, {skipped} skipped")
     return written
 
 
@@ -295,7 +295,7 @@ def build_corpus():
 # ---------------------------------------------------------------------------
 
 def build_queries():
-    print("Building queries.jsonl from MIMIC FHIR patient bundles …")
+    print("Building queries.jsonl from MIMIC FHIR patient bundles...")
     patient_ids = TOP200_FILE.read_text().strip().splitlines()
     out_path = OUT_DIR / "queries.jsonl"
     written = 0
@@ -317,7 +317,7 @@ def build_queries():
             outfile.write(json.dumps(record) + "\n")
             written += 1
 
-    print(f"  → {written} patients written, {missing} missing files")
+    print(f"  -> {written} patients written, {missing} missing files")
     return written, patient_ids
 
 
@@ -332,7 +332,7 @@ def build_stub_qrels(patient_ids: list[str], first_trial_id: str):
     the GenericDataLoader is satisfied.  Recall/precision metrics will
     be meaningless (no ground truth), but the retrieval pipeline runs.
     """
-    print("Writing stub qrels/test.tsv …")
+    print("Writing stub qrels/test.tsv...")
     qrels_path = OUT_DIR / "qrels" / "test.tsv"
     with open(qrels_path, "w") as f:
         f.write("query-id\tcorpus-id\tscore\n")
@@ -340,7 +340,7 @@ def build_stub_qrels(patient_ids: list[str], first_trial_id: str):
             pid = pid.strip()
             if pid:
                 f.write(f"cardio-{pid}\t{first_trial_id}\t0\n")
-    print(f"  → stub qrels for {len([p for p in patient_ids if p.strip()])} patients")
+    print(f"  -> stub qrels for {len([p for p in patient_ids if p.strip()])} patients")
 
 
 # ---------------------------------------------------------------------------
@@ -365,23 +365,23 @@ if __name__ == "__main__":
     print("Cardiology dataset ready:")
     print(f"  Corpus  : {OUT_DIR}/corpus.jsonl  ({n_trials:,} trials)")
     print(f"  Queries : {OUT_DIR}/queries.jsonl ({n_patients} patients)")
-    print(f"  Qrels   : {OUT_DIR}/qrels/test.tsv (stub — no ground truth)")
+    print(f"  Qrels   : {OUT_DIR}/qrels/test.tsv (stub - no ground truth)")
     print()
     print("Next steps:")
     print("  1. Generate retrieval keywords (optional, costs ~200 API calls):")
-    print("     python trialgpt_retrieval/keyword_generation.py cardiology gpt-4-turbo")
+    print("     python trialgpt_retrieval/keyword_generation.py cardiology gpt-5-mini")
     print()
     print("  2. Run hybrid retrieval (BM25-only first, MedCPT optional):")
     print("     python run_cardiology_retrieval.py")
     print()
-    print("  3. Run matching (expensive — ~200 × top_K × 2 API calls):")
-    print("     python trialgpt_matching/run_matching.py cardiology gpt-4-turbo")
+    print("  3. Run matching (expensive - ~200 x top_K x 2 API calls):")
+    print("     python trialgpt_matching/run_matching.py cardiology gpt-5-mini")
     print()
     print("  4. Run ranking aggregation:")
-    print("     python trialgpt_ranking/run_aggregation.py cardiology gpt-4-turbo \\")
-    print("       results/matching_results_cardiology_gpt-4-turbo.json")
+    print("     python trialgpt_ranking/run_aggregation.py cardiology gpt-5-mini \\")
+    print("       results/matching_results_cardiology_gpt-5-mini.json")
     print()
     print("  5. Get top-5 matches per patient:")
     print("     python top5_cardiology.py \\")
-    print("       results/matching_results_cardiology_gpt-4-turbo.json \\")
-    print("       results/aggregation_results_cardiology_gpt-4-turbo.json")
+    print("       results/matching_results_cardiology_gpt-5-mini.json \\")
+    print("       results/aggregation_results_cardiology_gpt-5-mini.json")

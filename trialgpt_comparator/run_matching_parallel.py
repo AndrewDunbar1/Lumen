@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Parallel TrialGPT matching — drops-in for trialgpt_matching/run_matching.py
+Parallel TrialGPT matching - drops-in for trialgpt_matching/run_matching.py
 but uses a thread pool so many pairs run concurrently.
 
 Usage:
@@ -20,7 +20,7 @@ from nltk.tokenize import sent_tokenize
 sys.path.insert(0, str(Path(__file__).parent / "trialgpt_matching"))
 from TrialGPT import trialgpt_matching  # noqa: E402
 
-# ── CLI ───────────────────────────────────────────────────────────────────────
+# --- CLI ---
 parser = argparse.ArgumentParser()
 parser.add_argument("corpus")
 parser.add_argument("model")
@@ -38,7 +38,7 @@ dataset     = json.load(open(f"dataset/{corpus}/retrieved_trials.json"))
 # Load existing cache
 if os.path.exists(output_path):
     output: dict = json.load(open(output_path))
-    print(f"Resuming — {sum(len(v.get('1',{})) for v in output.values())} pairs already cached")
+    print(f"Resuming - {sum(len(v.get('1',{})) for v in output.values())} pairs already cached")
 else:
     output = {}
 
@@ -50,7 +50,7 @@ def save():
     with open(output_path, "w") as f:
         json.dump(output, f, indent=2)
 
-# ── Build work list ───────────────────────────────────────────────────────────
+# --- Build work list ---
 tasks = []   # (patient_id, formatted_patient, label, trial)
 
 for instance in dataset:
@@ -86,7 +86,7 @@ print(f"To process   : {len(tasks)}")
 print(f"Workers      : {workers}")
 print()
 
-# ── Worker function ───────────────────────────────────────────────────────────
+# --- Worker function ---
 def process_pair(task):
     patient_id, patient, label, trial, trial_id = task
     try:
@@ -98,7 +98,7 @@ def process_pair(task):
     except Exception as exc:
         return ("err", patient_id, trial_id, str(exc))
 
-# ── Run ───────────────────────────────────────────────────────────────────────
+# --- Run ---
 completed = skip_count
 errors    = 0
 
@@ -115,4 +115,4 @@ with ThreadPoolExecutor(max_workers=workers) as pool:
             print(f"  {completed}/{total} tasks done  |  {pairs_done} pairs in file  |  {errors} errors",
                   flush=True)
 
-print(f"\n✓ Matching complete — {output_path}")
+print(f"\nMatching complete - {output_path}")
