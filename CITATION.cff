@@ -4,6 +4,10 @@ title: "Lumen AI"
 type: software
 license: MIT
 repository-code: "https://github.com/AndrewDunbar1/Lumen"
+identifiers:
+  - type: doi
+    value: "10.5061/dryad.gmsbcc36k"
+    description: "Aggregate evaluation results (Dryad dataset)"
 authors:
   - family-names: Dunbar
     given-names: Andrew

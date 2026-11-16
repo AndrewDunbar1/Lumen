@@ -59,7 +59,7 @@ No patient data or trial text is distributed with this repository.
 
 - **Patients.** The evaluation used 200 cardiology patients from MIMIC-IV, represented as FHIR bundles. MIMIC-IV is available from [PhysioNet](https://physionet.org/content/mimiciv/) to credentialed users who complete its data use agreement. It cannot be redistributed here.
 - **Trials.** The corpus was 11,231 cardiology trials from [ClinicalTrials.gov](https://clinicaltrials.gov/), snapshot of March 5, 2026, enriched through the ClinicalTrials.gov API v2.
-- **Results.** Aggregate results behind the paper's tables and figures, and the registry identifiers of the trial corpus, are deposited in Dryad (DOI to be added on publication).
+- **Results.** Aggregate results behind the paper's tables and figures, and the registry identifiers of the trial corpus, are deposited in Dryad: https://doi.org/10.5061/dryad.gmsbcc36k
 
 ## Usage
 
