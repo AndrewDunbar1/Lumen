@@ -5,6 +5,7 @@ Lumen AI is an open-source pipeline that narrows a large clinical trial corpus t
 This repository contains the code for:
 
 > Dunbar A, Elfayoumy H, Broder L, Barakat N, Kunaparaju A, Jog S, Patel S, Lam T, Ganatra S, Dani SS. Lumen AI: Compressing Large Clinical Trial Search Spaces into Clinician-Reviewable Shortlists. *JAMIA Open*. 2026.
+> *Elfayoumy H and Broder L contributed equally
 
 ## How it works
 
