@@ -96,6 +96,8 @@ pytest
 
 If you use this code, please cite the paper above. Citation metadata is in `CITATION.cff`.
 
+Hussein Elfayoumy and Luca Broder contributed equally as co-second authors.
+
 ## License
 
 MIT. See `LICENSE`.
